@@ -208,13 +208,20 @@ while True:
     # ACCL XYZ LIVE DATA BLOCK
     if not all_data.empty:
         st.session_state.accelXYZ_live_data = pd.concat([st.session_state.accelXYZ_live_data, all_data]).tail(1000)
+        st.session_state.accelXYZ_live_data["accelX"] = st.session_state.accelXYZ_live_data["accelX"].astype('object')
+        st.session_state.accelXYZ_live_data["accelY"] = st.session_state.accelXYZ_live_data["accelY"].astype('object')
+        st.session_state.accelXYZ_live_data["accelZ"] = st.session_state.accelXYZ_live_data["accelZ"].astype('object')
         st.session_state.last_accelXYZ_update = time.time()  # Update timestamp
 
     if time.time() - st.session_state.last_accelXYZ_update > 5:
         st.session_state.accelXYZ_live_data = pd.DataFrame(columns=["timestamp", "accelX", "accelY", "accelZ"])
 
     if not st.session_state.accelXYZ_live_data.empty:
-        fig_accelXYZ_L = px.line(st.session_state.accelXYZ_live_data, x="timestamp", y="accelX", title="📊 Real-time XYZ Acceleration Data", color_discrete_sequence=["blue"])
+        fig_accelXYZ_L = px.line(st.session_state.accelXYZ_live_data, x="timestamp", 
+        y=["accelX", "accelY", "accelZ"], 
+        title="📈 Real-time XYZ Acceleration Data",
+        color_discrete_sequence=["red", "green", "blue"]
+        )
         fig_accelXYZ_L.update_xaxes(title_text="Time")
         fig_accelXYZ_L.update_yaxes(title_text="XYZ Acceleration Data (m/s/s)")
     else:
@@ -236,7 +243,7 @@ while True:
         fig_accelXYZ_S = px.line(st.session_state.accelXYZ_stored_data, x="timestamp", 
             y=["accelX", "accelY", "accelZ"], 
             title="📊 Stored XYZ Acceleration Data", 
-            color_discrete_sequence=["blue", "green", "red"]
+            color_discrete_sequence=["red", "green", "blue"]
         )
         fig_accelXYZ_S.update_xaxes(title_text="Time")
         fig_accelXYZ_S.update_yaxes(title_text="Acceleration Data (m/s/s)")
@@ -249,13 +256,20 @@ while True:
     # GYRO XYZ LIVE DATA BLOCK
     if not all_data.empty:
         st.session_state.gyroXYZ_live_data = pd.concat([st.session_state.gyroXYZ_live_data, all_data]).tail(1000)
+        st.session_state.gyroXYZ_live_data["gyroX"] = st.session_state.gyroXYZ_live_data["accelX"].astype('object')
+        st.session_state.gyroXYZ_live_data["gyroY"] = st.session_state.gyroXYZ_live_data["accelY"].astype('object')
+        st.session_state.gyroXYZ_live_data["gyroZ"] = st.session_state.gyroXYZ_live_data["accelZ"].astype('object')
         st.session_state.last_gyroXYZ_update = time.time()  # Update timestamp
 
     if time.time() - st.session_state.last_gyroXYZ_update > 5:
         st.session_state.gyroXYZ_live_data = pd.DataFrame(columns=["timestamp", "gyroX", "gyroY", "gyroZ"])
 
-    if not st.session_state.accelXYZ_live_data.empty:
-        fig_gyroXYZ_L = px.line(st.session_state.accelXYZ_live_data, x="timestamp", y="gyroX", title="📊 Real-time XYZ Acceleration Data", color_discrete_sequence=["blue"])
+    if not st.session_state.gyroXYZ_live_data.empty:
+        fig_gyroXYZ_L = px.line(st.session_state.gyroXYZ_live_data, x="timestamp", 
+        y=["gyroX", "gyroY", "gyroZ"], 
+        title="📈 Real-time XYZ Gyroscope Data", 
+        color_discrete_sequence=["red", "green", "blue"]
+        )
         fig_gyroXYZ_L.update_xaxes(title_text="Time")
         fig_gyroXYZ_L.update_yaxes(title_text="XYZ Gyroscope Data (m/s/s)")
     else:
