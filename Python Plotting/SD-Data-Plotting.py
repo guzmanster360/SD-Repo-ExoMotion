@@ -29,94 +29,18 @@ import SD_Python_AWS
 # AWS Kinesis setup
 STREAM_NAME = "SD_1"
 REGION = "us-east-2"
-
 # AWS S3 setup
 S3_BUCKET = "seniordesign20251"
 S3_PREFIX = "data/"
 
 users_data = {}
 
-aws_manager = SD_Python_AWS.AWSManager()
-
-def list_shards():
-    """Retrieve all shard IDs from the Kinesis stream."""
-    shard_ids = []
-    response = kinesis_client.list_shards(StreamName=STREAM_NAME)
-
-    while response:
-        shard_ids.extend([shard["ShardId"] for shard in response["Shards"]])
-        if "NextToken" in response:
-            response = kinesis_client.list_shards(NextToken=response["NextToken"])
-        else:
-            break
-
-    return shard_ids
-
-def get_records(shardID):
-    # Get the shard iterator
-    shard_iterator_response = kinesis_client.get_shard_iterator(
-    StreamName=STREAM_NAME,
-    ShardId=shardID,
-    ShardIteratorType="LATEST"
-    )
-    shard_iterator = shard_iterator_response["ShardIterator"]
-
-    records_response = kinesis_client.get_records(ShardIterator=shard_iterator, Limit=100)
-    records = [json.loads(record["Data"].decode("utf-8")) for record in records_response["Records"]]
-    return pd.DataFrame(records) if records else pd.DataFrame()
-
-def get_all_records():
-    """Iterate through all shards and fetch records."""
-    all_data = []
-    shard_ids = list_shards()
-
-    for shard_id in shard_ids:
-        df = get_records(shard_id)
-        print(df)
-        if not df.empty:
-            all_data.append(df)
-
-    return pd.concat(all_data, ignore_index=True) if all_data else pd.DataFrame()
-
-def list_s3_files(bucket, prefix):
-    """List all files in the S3 bucket under the specified prefix."""
-    response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
-    return [obj["Key"] for obj in response.get("Contents", [])]
-
-def download_s3_file(bucket, file_key):
-    """Download a file from S3 and parse it as a list of JSON objects."""
-    response = s3_client.get_object(Bucket=bucket, Key=file_key)
-    data = response["Body"].read().decode("utf-8")
-
-    # Ensure proper separation of JSON objects before decoding
-    formatted_data = data.replace("}{", "}\n{")  # ✅ Insert newlines between concatenated JSON objects
-    try:
-        return [json.loads(line) for line in formatted_data.strip().split("\n") if line]  # ✅ Properly handles multiple JSON objects
-    except json.JSONDecodeError as e:
-        print(f"JSON Decode Error in {file_key}: {e}")
-        print(f"First 500 characters of file: {formatted_data[:500]}")  # Debugging hint
-        return []
-
-def get_s3_data(prefix):
-    """Fetch latest S3 data and return as DataFrame."""
-    files = list_s3_files(S3_BUCKET, prefix)
-    if not files:
-        return pd.DataFrame()
-    latest_file = sorted(files)[-1]  # Get the most recent file
-    data = download_s3_file(S3_BUCKET, latest_file)
-    # Assuming df is your DataFrame    
-    return pd.DataFrame(data)
+aws_manager = SD_Python_AWS.AWSManager(region=REGION, stream_name=STREAM_NAME, bucket=S3_BUCKET)
 
 # Streamlit UI
 st.set_page_config(page_title="ExoMotion Dashboard", layout="wide")
 
 st.title("📊 ExoMotion Data Collection Dashboard")
-
-# Dropdown for sensor selection
-def list_s3_user_files(bucket, prefix):
-    """List all files in the S3 bucket under the specified prefix and return only filenames."""
-    response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
-    return [obj["Key"].replace(prefix, "") for obj in response.get("Contents", [])]
 
 # Data
 if "sea_live_data" not in st.session_state:
@@ -157,11 +81,11 @@ if "last_fsr_update" not in st.session_state:
     st.session_state.last_fsr_update = time.time()
 
 
-user_uuids = [path.split('/')[0] for path in list_s3_user_files(S3_BUCKET, S3_PREFIX)]
+user_uuids = [path.split('/')[0] for path in aws_manager.list_s3_user_files(S3_PREFIX)]
 
 for i in user_uuids:
     sessionPrefix = f"{S3_PREFIX}{i}/"
-    session_uuids = [path.split('/')[0] for path in list_s3_user_files(S3_BUCKET, sessionPrefix)]
+    session_uuids = [path.split('/')[0] for path in aws_manager.list_s3_user_files(sessionPrefix)]
     sessions = []
     for j in session_uuids:
         sessions.append(j)
@@ -207,13 +131,11 @@ with col2:
     chart_fsrS = st.empty()
 
 while True:
-
-    all_data = get_all_records()
+    all_data = aws_manager.get_all_records()
     print(all_data)
     # Assuming df is your DataFrame
-    all_s3_data = get_s3_data(f"{S3_PREFIX}{selected__user}/{selected__session}/")
+    all_s3_data = aws_manager.get_s3_data(f"{S3_PREFIX}{selected__user}/{selected__session}/")
     all_s3_data = all_s3_data.sort_values(by="timestamp", ascending=True)  # Sort in ascending order (oldest first)
-    gyro_XYZ_ts = st.session_state.accelXYZ_stored_data["timestamp"]
 
     # SEA DATA BLOCK
     # SEA LIVE DATA BLOCK

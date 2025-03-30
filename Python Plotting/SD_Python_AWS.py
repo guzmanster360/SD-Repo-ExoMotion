@@ -1,25 +1,21 @@
 import boto3
 import json
 import pandas as pd
-import streamlit as st
-import plotly.express as px
 import time
 from datetime import datetime
 from collections import deque
 
 class AWSManager():
 
-    def __init__(self, region, stream_name, bucket, prefix):
+    def __init__(self, region, stream_name, bucket):
         self.region = region
         self.stream_name = stream_name
         self.bucket = bucket
-        self.prefix = prefix
 
         self.kinesis_client = boto3.client("kinesis", region_name= self.region)
         self.s3_client = boto3.client("s3", region_name=region)
     # AWS Client
     
-
     def list_shards(self):
         """Retrieve all shard IDs from the Kinesis stream."""
         shard_ids = []
@@ -60,14 +56,14 @@ class AWSManager():
 
         return pd.concat(all_data, ignore_index=True) if all_data else pd.DataFrame()
 
-    def list_s3_files(self, bucket, prefix):
+    def list_s3_files(self, prefix):
         """List all files in the S3 bucket under the specified prefix."""
-        response = self.s3_client.list_objects_v2(Bucket=bucket, Prefix = prefix)
+        response = self.s3_client.list_objects_v2(Bucket=self.bucket, Prefix=prefix)
         return [obj["Key"] for obj in response.get("Contents", [])]
 
-    def download_s3_file(self, bucket, file_key):
+    def download_s3_file(self, file_key):
         """Download a file from S3 and parse it as a list of JSON objects."""
-        response = self.s3_client.get_object(Bucket=bucket, Key=file_key)
+        response = self.s3_client.get_object(Bucket=self.bucket, Key=file_key)
         data = response["Body"].read().decode("utf-8")
 
         # Ensure proper separation of JSON objects before decoding
@@ -81,10 +77,17 @@ class AWSManager():
 
     def get_s3_data(self, prefix):
         """Fetch latest S3 data and return as DataFrame."""
-        files = self.list_s3_files(self.bucket, prefix)
+        files = self.list_s3_files(prefix)
         if not files:
             return pd.DataFrame()
         latest_file = sorted(files)[-1]  # Get the most recent file
-        data = self.download_s3_file(self.bucket, latest_file)
+        data = self.download_s3_file(latest_file)
         # Assuming df is your DataFrame    
         return pd.DataFrame(data)
+    
+    # Dropdown for sensor selection
+    def list_s3_user_files(self, prefix):
+        """List all files in the S3 bucket under the specified prefix and return only filenames."""
+        response = self.s3_client.list_objects_v2(Bucket=self.bucket, Prefix=prefix)
+        return [obj["Key"].replace(prefix, "") for obj in response.get("Contents", [])]
+
