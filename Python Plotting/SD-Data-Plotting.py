@@ -141,13 +141,14 @@ while True:
     # SEA LIVE DATA BLOCK
     if not all_data.empty:
         st.session_state.sea_live_data = pd.concat([st.session_state.sea_live_data, all_data]).tail(1000)
+        st.session_state.emg_live_data["emgRaw"] = st.session_state.emg_live_data["emgRaw"].astype('object')
         st.session_state.last_sea_update = time.time()  # Update timestamp
 
     if time.time() - st.session_state.last_sea_update > 5:
         st.session_state.sea_live_data = pd.DataFrame(columns=["timestamp", "seaTorque"])
 
     if not st.session_state.sea_live_data.empty:
-        fig_seaL = px.line(st.session_state.sea_live_data, x="timestamp", y="seaTorque", title="📊 Real-time SEA Data", color_discrete_sequence=["blue"])
+        fig_seaL = px.line(st.session_state.sea_live_data, x="timestamp", y="seaTorque", title="📈 Real-time SEA Data", color_discrete_sequence=["blue"])
         fig_seaL.update_xaxes(title_text="Time")
         fig_seaL.update_yaxes(title_text="SEA Torque Data (N-m)")
     else:
@@ -163,7 +164,7 @@ while True:
         st.session_state.sea_stored_data = pd.DataFrame(columns=["timestamp", "seaTorque"])
 
     if not st.session_state.sea_stored_data.empty:
-        fig_seaS = px.line(st.session_state.sea_stored_data, x="timestamp", y="seaTorque", title="📊 SEA Stored Data", color_discrete_sequence=["blue"])
+        fig_seaS = px.line(st.session_state.sea_stored_data, x="timestamp", y="seaTorque", title="📈 SEA Stored Data", color_discrete_sequence=["blue"])
         fig_seaS.update_xaxes(title_text="Time")
         fig_seaS.update_yaxes(title_text="Torque Data (N-m)")
     else:
@@ -175,6 +176,7 @@ while True:
     # EMG LIVE DATA BLOCK
     if not all_data.empty:
         st.session_state.emg_live_data = pd.concat([st.session_state.emg_live_data, all_data]).tail(1000)
+        st.session_state.emg_live_data["emgRaw"] = st.session_state.emg_live_data["emgRaw"].astype('object')
         st.session_state.last_emg_update = time.time()  # Update timestamp
 
     if time.time() - st.session_state.last_emg_update > 5:
