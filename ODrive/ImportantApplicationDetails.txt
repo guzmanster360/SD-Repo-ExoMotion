@@ -1,0 +1,23 @@
+Hi Victor, some basic notes on the ODrive stuff:
+
+They have a downlodable Arduino library. Replace the .h and .cpp files in src w/ mine since I added a few methods to make the below control methods possible.
+Right now the motor is set to 19200 baud rate, but we can easily change that later. 
+
+NOTE: I have not yet figured out how to switch between the control modes without re-calibrating. I tried briefly, but it doesn't seem to work right.
+
+TORQUE CONTROL
+TorqueUART is a modified file by me to let you use torque control. Just put in the value in Nm and have at it!
+NOTE: If the torque is above zero and there is no load, of course it will start spinning as fast as possible. Be careful cause I almost ripped all the cables doing this LOL.
+NOTE2: There is a hard and soft velocity limit on the ODrive. It will try to keep under the soft limit, and if it goes over the hard limit, it will shut off the motor. I can change this later if you need. 
+Note that releasing the motor from full rest when the torque is high can cause a sudden acceleration that causes the velocity to spike before the driver "realizes" what's going on, causing it to exceed the hard limit and shut
+down.
+
+
+POSITION & TORQUE CONTROL
+SineWaveUART is a modified version of the example sketch they provide, I basically only add like 3-4 lines total to get position control working.
+This file contains two approaches to position control: position control w/ optional velocity/torque feedforward terms, and another position control, but this time it uses velocity/torque limits.
+NOTE: Velocity is a HARD SHUT OFF limit, aka if velocity (in rev/s) exceeds this value, the motor shuts off for safety. Torque, on the other hand, basically just means the motor will max out at that torque.
+NOTE2: From my testing, if torque is too high, then if you stop/release the motor from rest, it can for a split second accelerate very quickly due to high torque, 
+causing it to reach very high velocity before the driver "catches up." As a consequence, this can cause the motor to easily hit the velocity limit by accident when suddenly releasing or stopping the motor. If the
+driver board turns red when jerked suddenly, this is probably it.
+
