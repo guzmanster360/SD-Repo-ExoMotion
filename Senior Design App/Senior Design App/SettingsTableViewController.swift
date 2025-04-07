@@ -18,21 +18,20 @@ class SettingsTableViewController: UITableViewController {
     @IBOutlet weak var sessionIDLabel: UILabel!
     
     var user: String = ""
-    var session: String = ""
     var userID: String = ""
+    var session: String = ""
     var sessionID: String = ""
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        let fetchedResults = storageManager.retrieveUserData()
-            for userStored in fetchedResults {
-                if fetchedResults.count > 0 {
-                    userNameField.text = userStored.value(forKey: "userName") as? String
-                    userIDLabel.text = userStored.value(forKey: "userID") as? String
-                    sessionIDLabel.text = userStored.value(forKey: "sessionID") as? String
-                    sessionDescriptionField.text = userStored.value(forKey: "sessionDescription") as? String
-                }
-            }
+        user = getStoredData()[0]
+        userID = getStoredData()[1]
+        session = getStoredData()[2]
+        sessionID = getStoredData()[3]
+        userNameField.text = user
+        userIDLabel.text = userID
+        sessionDescriptionField.text = session
+        sessionIDLabel.text = sessionID
 //        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
     }
     
@@ -56,9 +55,18 @@ class SettingsTableViewController: UITableViewController {
             })
             self.present(alert, animated: true, completion: nil)
         }
+        else if userNameField.text == user {
+            storageManager.clearData()
+            sessionID = UUID().uuidString
+            userIDLabel.text = userID
+            sessionIDLabel.text = sessionID
+            
+            awsManager.createS3Folder(userID: userID, sessionID: sessionID)
+            
+            storageManager.storeUser(userName: userNameField.text!, userID: userID, session: sessionDescriptionField.text!, sessionID: sessionID)
+        }
         else {
             storageManager.clearData()
-            
             userID = UUID().uuidString
             sessionID = UUID().uuidString
             userIDLabel.text = userID
@@ -73,27 +81,21 @@ class SettingsTableViewController: UITableViewController {
     }
     
     @IBAction func newSessionButtonPressed(_ sender: Any) {
-        if userNameField.text == "" {
-            let alert = UIAlertController(title: "Missing User Name", message: "Please Enter a User Name ", preferredStyle: .alert)
-            // adds option to the alert
-            alert.addAction(UIAlertAction(title: "Ok", style: .default) { _ in
-            })
-            self.present(alert, animated: true, completion: nil)
-        }
-        else if sessionDescriptionField.text == "" {
-            let alert = UIAlertController(title: "Missing Description", message: "Please Add a Session Description", preferredStyle: .alert)
-            // adds option to the alert
-            alert.addAction(UIAlertAction(title: "Ok", style: .default) { _ in
-            })
-            self.present(alert, animated: true, completion: nil)
-        }
-        storageManager.clearData()
-
-        sessionID = UUID().uuidString
-        sessionIDLabel.text = sessionID
-        
-        awsManager.createS3Folder(userID: userID, sessionID: sessionID)
-
-        storageManager.storeUser(userName: userNameField.text!, userID: userID, session: sessionDescriptionField.text!, sessionID: sessionID)
+      
+    }
+    
+    func getStoredData() -> [String] {
+        var output: [String] = []
+        let fetchedResults = storageManager.retrieveUserData()
+            for userStored in fetchedResults {
+                if fetchedResults.count > 0 {
+                    output.append((userStored.value(forKey: "userName") as? String)!)
+                    output.append((userStored.value(forKey: "userID") as? String)!)
+                    output.append((userStored.value(forKey: "sessionID") as? String)!)
+                    output.append((userStored.value(forKey: "sessionDescription") as? String)!)
+                    return output
+                }
+            }
+        return output
     }
 }

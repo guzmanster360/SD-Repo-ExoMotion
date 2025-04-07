@@ -22,7 +22,12 @@ import SD_Python_AWS
 #     let gyroX: Double
 #     let gyroY: Double
 #     let gyroZ: Double
-#     let fsrPres: Double
+#     let fsrPres_1: Double
+#     let fsrPres_2: Double
+#     let fsrPres_3: Double
+#     let fsrPres_4: Double
+#     let fsrPres_5: Double
+#     let fsrPres_6: Double
 # }
 
 
@@ -36,6 +41,9 @@ S3_PREFIX = "data/"
 users_data = {}
 
 aws_manager = SD_Python_AWS.AWSManager(region=REGION, stream_name=STREAM_NAME, bucket=S3_BUCKET)
+
+storage_tail = 1000
+live_tail = 1000
 
 # Streamlit UI
 st.set_page_config(page_title="ExoMotion Dashboard", layout="wide")
@@ -74,9 +82,9 @@ if "last_gyroX_update" not in st.session_state:
     st.session_state.last_gyroXYZ_update = time.time()
 
 if "fsr_live_data" not in st.session_state:
-    st.session_state.fsr_live_data = pd.DataFrame(columns=["timestamp", "fsrPres"])
+    st.session_state.fsr_live_data = pd.DataFrame(columns=["timestamp", "fsrPres_1", "fsrPres_2", "fsrPres_3", "fsrPres_4", "fsrPres_5", "fsrPres_6"])
 if "fsr_stored_data" not in st.session_state:
-    st.session_state.fsr_stored_data = pd.DataFrame(columns=["timestamp", "fsrPres"])
+    st.session_state.fsr_stored_data = pd.DataFrame(columns=["timestamp", "fsrPres_1", "fsrPres_2", "fsrPres_3", "fsrPres_4", "fsrPres_5", "fsrPres_6"])
 if "last_fsr_update" not in st.session_state:
     st.session_state.last_fsr_update = time.time()
 
@@ -88,7 +96,8 @@ for i in user_uuids:
     session_uuids = [path.split('/')[0] for path in aws_manager.list_s3_user_files(sessionPrefix)]
     sessions = []
     for j in session_uuids:
-        sessions.append(j)
+        if j not in sessions:
+            sessions.append(j)
     users_data[i] = sessions
 
 
@@ -140,7 +149,7 @@ while True:
     # SEA DATA BLOCK
     # SEA LIVE DATA BLOCK
     if not all_data.empty:
-        st.session_state.sea_live_data = pd.concat([st.session_state.sea_live_data, all_data]).tail(1000)
+        st.session_state.sea_live_data = pd.concat([st.session_state.sea_live_data, all_data]).tail(live_tail)
         st.session_state.emg_live_data["emgRaw"] = st.session_state.emg_live_data["emgRaw"].astype('object')
         st.session_state.last_sea_update = time.time()  # Update timestamp
 
@@ -158,7 +167,7 @@ while True:
 
     #SEA S3 BLOCK
     if not all_s3_data.empty:
-        st.session_state.sea_stored_data = pd.concat([st.session_state.sea_stored_data, all_s3_data]).tail(1000)
+        st.session_state.sea_stored_data = pd.concat([st.session_state.sea_stored_data, all_s3_data])
         st.session_state.sea_stored_data["seaTorque"] = st.session_state.sea_stored_data["seaTorque"].astype('object')
     else:
         st.session_state.sea_stored_data = pd.DataFrame(columns=["timestamp", "seaTorque"])
@@ -175,7 +184,7 @@ while True:
     # EMG DATA BLOCK
     # EMG LIVE DATA BLOCK
     if not all_data.empty:
-        st.session_state.emg_live_data = pd.concat([st.session_state.emg_live_data, all_data]).tail(1000)
+        st.session_state.emg_live_data = pd.concat([st.session_state.emg_live_data, all_data]).tail(live_tail)
         st.session_state.emg_live_data["emgRaw"] = st.session_state.emg_live_data["emgRaw"].astype('object')
         st.session_state.last_emg_update = time.time()  # Update timestamp
 
@@ -192,7 +201,7 @@ while True:
 
     # S3 EMG DATA BLOCK
     if not all_s3_data.empty:
-        st.session_state.emg_stored_data = pd.concat([st.session_state.emg_stored_data, all_s3_data]).tail(1000)
+        st.session_state.emg_stored_data = pd.concat([st.session_state.emg_stored_data, all_s3_data])
         st.session_state.emg_stored_data["emgRaw"] = st.session_state.emg_stored_data["emgRaw"].astype('object')
     else:
         st.session_state.emg_stored_data = pd.DataFrame(columns=["timestamp", "emgRaw"])
@@ -209,7 +218,7 @@ while True:
     # ACCEL XYZ DATA BLOCK
     # ACCL XYZ LIVE DATA BLOCK
     if not all_data.empty:
-        st.session_state.accelXYZ_live_data = pd.concat([st.session_state.accelXYZ_live_data, all_data]).tail(1000)
+        st.session_state.accelXYZ_live_data = pd.concat([st.session_state.accelXYZ_live_data, all_data]).tail(live_tail)
         st.session_state.accelXYZ_live_data["accelX"] = st.session_state.accelXYZ_live_data["accelX"].astype('object')
         st.session_state.accelXYZ_live_data["accelY"] = st.session_state.accelXYZ_live_data["accelY"].astype('object')
         st.session_state.accelXYZ_live_data["accelZ"] = st.session_state.accelXYZ_live_data["accelZ"].astype('object')
@@ -234,7 +243,7 @@ while True:
     #ACCEL XYZ S3 BLOCK
     if not all_s3_data.empty:
         all_s3_data.reset_index(drop=True, inplace=True)
-        st.session_state.accelXYZ_stored_data = pd.concat([st.session_state.accelXYZ_stored_data, all_s3_data]).tail(1000)
+        st.session_state.accelXYZ_stored_data = pd.concat([st.session_state.accelXYZ_stored_data, all_s3_data])
         st.session_state.accelXYZ_stored_data["accelX"] = st.session_state.accelXYZ_stored_data["accelX"].astype('object')
         st.session_state.accelXYZ_stored_data["accelY"] = st.session_state.accelXYZ_stored_data["accelY"].astype('object')
         st.session_state.accelXYZ_stored_data["accelZ"] = st.session_state.accelXYZ_stored_data["accelZ"].astype('object')
@@ -257,7 +266,7 @@ while True:
     # GYRO XYZ DATA BLOCK
     # GYRO XYZ LIVE DATA BLOCK
     if not all_data.empty:
-        st.session_state.gyroXYZ_live_data = pd.concat([st.session_state.gyroXYZ_live_data, all_data]).tail(1000)
+        st.session_state.gyroXYZ_live_data = pd.concat([st.session_state.gyroXYZ_live_data, all_data]).tail(live_tail)
         st.session_state.gyroXYZ_live_data["gyroX"] = st.session_state.gyroXYZ_live_data["accelX"].astype('object')
         st.session_state.gyroXYZ_live_data["gyroY"] = st.session_state.gyroXYZ_live_data["accelY"].astype('object')
         st.session_state.gyroXYZ_live_data["gyroZ"] = st.session_state.gyroXYZ_live_data["accelZ"].astype('object')
@@ -282,7 +291,7 @@ while True:
     #GYRO XYZ S3 BLOCK
     if not all_s3_data.empty:
         all_s3_data.reset_index(drop=True, inplace=True)
-        st.session_state.gyroXYZ_stored_data = pd.concat([st.session_state.gyroXYZ_stored_data, all_s3_data]).tail(1000)
+        st.session_state.gyroXYZ_stored_data = pd.concat([st.session_state.gyroXYZ_stored_data, all_s3_data])
         st.session_state.gyroXYZ_stored_data["gyroX"] = st.session_state.gyroXYZ_stored_data["gyroX"].astype('object')
         st.session_state.gyroXYZ_stored_data["gyroY"] = st.session_state.gyroXYZ_stored_data["gyroY"].astype('object')
         st.session_state.gyroXYZ_stored_data["gyroZ"] = st.session_state.gyroXYZ_stored_data["gyroZ"].astype('object')
@@ -305,15 +314,24 @@ while True:
     # FSR DATA BLOCK
     # FSR LIVE DATA BLOCK
     if not all_data.empty:
-        st.session_state.fsr_live_data["fsrPres"] = st.session_state.fsr_live_data["fsrPres"].astype('object')
-        st.session_state.fsr_live_data = pd.concat([st.session_state.fsr_live_data, all_data]).tail(1000)
+        st.session_state.fsr_live_data = pd.concat([st.session_state.fsr_live_data, all_data]).tail(live_tail)
+        st.session_state.fsr_live_data["fsrPres_1"] = st.session_state.fsr_live_data["fsrPres_1"].astype('object')
+        st.session_state.fsr_live_data["fsrPres_2"] = st.session_state.fsr_live_data["fsrPres_2"].astype('object')
+        st.session_state.fsr_live_data["fsrPres_3"] = st.session_state.fsr_live_data["fsrPres_3"].astype('object')
+        st.session_state.fsr_live_data["fsrPres_4"] = st.session_state.fsr_live_data["fsrPres_4"].astype('object')
+        st.session_state.fsr_live_data["fsrPres_5"] = st.session_state.fsr_live_data["fsrPres_5"].astype('object')
+        st.session_state.fsr_live_data["fsrPres_6"] = st.session_state.fsr_live_data["fsrPres_6"].astype('object')
         st.session_state.fsr_live_data = time.time()  # Update timestamp
 
     if time.time() - st.session_state.last_fsr_update > 5:
-        st.session_state.fsr_live_data = pd.DataFrame(columns=["timestamp", "fsrPres"])
+        st.session_state.fsr_live_data = pd.DataFrame(columns=["timestamp", "fsrPres_1", "fsrPres_2", "fsrPres_3", "fsrPres_4", "fsrPres_5", "fsrPres_6"])
 
     if not st.session_state.fsr_live_data.empty:
-        fig_fsrL = px.line(st.session_state.fsr_live_data, x="timestamp", y="fsrPres", title="📊 Real-time FSR Data", color_discrete_sequence=["yellow"])
+        fig_fsrL = px.line(st.session_state.fsr_live_data, x="timestamp", 
+        y=["fsrPres_1", "fsrPres_2", "fsrPres_3", "fsrPres_4", "fsrPres_5", "fsrPres_6"], 
+        title="📊 Real-time FSR Data", 
+        color_discrete_sequence=["red", "green", "yellow", "orange", "blue", "purple"]
+        )
         fig_fsrL.update_xaxes(title_text="Time")
         fig_fsrL.update_yaxes(title_text="FSR Signal Value N")
     else:
@@ -322,15 +340,25 @@ while True:
 
     # S3 FSR DATA BLOCK
     if not all_s3_data.empty:
-        st.session_state.fsr_stored_data = pd.concat([st.session_state.fsr_stored_data, all_s3_data]).tail(1000)
-        st.session_state.fsr_stored_data["fsrPres"] = st.session_state.fsr_stored_data["fsrPres"].astype('object')
+        st.session_state.fsr_stored_data = pd.concat([st.session_state.fsr_stored_data, all_s3_data])
+        st.session_state.fsr_stored_data["fsrPres_1"] = st.session_state.fsr_stored_data["fsrPres_1"].astype('object')
+        st.session_state.fsr_stored_data["fsrPres_2"] = st.session_state.fsr_stored_data["fsrPres_2"].astype('object')
+        st.session_state.fsr_stored_data["fsrPres_3"] = st.session_state.fsr_stored_data["fsrPres_3"].astype('object')
+        st.session_state.fsr_stored_data["fsrPres_4"] = st.session_state.fsr_stored_data["fsrPres_4"].astype('object')
+        st.session_state.fsr_stored_data["fsrPres_5"] = st.session_state.fsr_stored_data["fsrPres_5"].astype('object')
+        st.session_state.fsr_stored_data["fsrPres_6"] = st.session_state.fsr_stored_data["fsrPres_6"].astype('object')
+
     else:
-        st.session_state.fsr_stored_data = pd.DataFrame(columns=["timestamp", "fsrPres"])
+        st.session_state.fsr_stored_data = pd.DataFrame(columns=["timestamp", "fsrPres_1", "fsrPres_2", "fsrPres_3", "fsrPres_4", "fsrPres_5", "fsrPres_6"])
 
     if not st.session_state.fsr_stored_data.empty:
-        fig_fsrS = px.line(st.session_state.fsr_stored_data, x="timestamp", y="fsrPres", title="📊 FSR Stored Data", color_discrete_sequence=["yellow"])
+        fig_fsrS = px.line(st.session_state.fsr_stored_data, x="timestamp", 
+        y=["fsrPres_1", "fsrPres_2", "fsrPres_3", "fsrPres_4", "fsrPres_5", "fsrPres_6"], 
+        title="📊 FSR Stored Data", 
+        color_discrete_sequence=["red", "green", "yellow", "orange", "blue", "purple"]
+        )
         fig_fsrS.update_xaxes(title_text="Time")
-        fig_fsrS.update_yaxes(title_text="Stored Signal Value")
+        fig_fsrS.update_yaxes(title_text="Force (N)")
     else:
         fig_fsrS = px.line(title="📈 No Stored FSR Data Available...")
 

@@ -6,8 +6,21 @@
 //
 
 import UIKit
+import Charts
 
 
-class DashboardViewController {
-    
+class DashboardViewController: UIViewController {
+    var data = [1, 2, 3, 4, 5, 7, 8]
+
+    override func viewDidLoad() {
+        
+        let timer = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()
+        
+        Chart(Array(data.enumerated()), id: \.0) { index, magnitude in
+            BarMark (
+                x: .value("Time", String(index)),
+                y: .value("value", magnitude)
+            )
+        }
+    }
 }

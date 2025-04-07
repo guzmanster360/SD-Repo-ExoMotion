@@ -23,7 +23,12 @@ struct DataOut: Codable {
     let gyroX: Double
     let gyroY: Double
     let gyroZ: Double
-    let fsrPres: Double
+    let fsrPres_1: Double
+    let fsrPres_2: Double
+    let fsrPres_3: Double
+    let fsrPres_4: Double
+    let fsrPres_5: Double
+    let fsrPres_6: Double
 }
 
 class AWSManager {

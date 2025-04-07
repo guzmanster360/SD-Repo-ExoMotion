@@ -14,8 +14,9 @@ import CoreData
 
 class ViewController: UIViewController {
     
-    var bleManager: BLEManager?
-    var storageManager: StorageManager?
+    var bleManager = BLEManager()
+    var storageManager = StorageManager()
+    var awsManager = AWSManager()
     var userName: String?
     
     @IBOutlet weak var espConnect: UIButton!
@@ -24,8 +25,6 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         configureUI()
-        //        Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(getter: dataLabel), userInfo: nil, repeats: true)
-        // Do any additional setup after loading the view.
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -34,13 +33,40 @@ class ViewController: UIViewController {
 
     @IBAction func beginSessionPressed(_ sender: Any) {
         
-        let fetchedResults = storageManager!.retrieveUserData()
-        // iterate through the pizzas in core data
-        bleManager!.startScanning()
+        let fetchedResults = storageManager.retrieveUserData()
+            for userStored in fetchedResults {
+                if fetchedResults.count > 0 {
+                    var userCheck = userStored.value(forKey: "userName") as? String
+                    var userIDCheck = userStored.value(forKey: "userID") as? String
+                    var sessionDescCheck = userStored.value(forKey: "sessionDescription") as? String
+                    
+                    if userCheck == "" || sessionDescCheck == "" || userIDCheck == ""{
+                        let alert = UIAlertController(title: "Missing Data in Settings", message: "Please Enter a User Info.", preferredStyle: .alert)
+                        // adds option to the alert
+                        alert.addAction(UIAlertAction(title: "Ok", style: .default) { _ in
+                        })
+                        self.present(alert, animated: true, completion: nil)
+                    }
+                    else {
+                        var sessionID = UUID().uuidString
+                        storageManager.clearData()
+                        awsManager.createS3Folder(userID: userIDCheck!, sessionID: sessionID)
+                        storageManager.storeUser(userName: userCheck!, userID: userIDCheck!, session: sessionDescCheck!, sessionID: sessionID)
+                        bleManager.startScanning()
+                    }
+                }
+                else {
+                        let alert = UIAlertController(title: "Missing Data in Settings", message: "Please Enter a User Info.", preferredStyle: .alert)
+                        // adds option to the alert
+                        alert.addAction(UIAlertAction(title: "Ok", style: .default) { _ in
+                        })
+                        self.present(alert, animated: true, completion: nil)
+                    }
+                }
     }
     
     @IBAction func bleConnect(_ sender: Any) {
-        bleManager!.startScanning()
+        bleManager.startScanning()
     }
     
     func configureUI() {

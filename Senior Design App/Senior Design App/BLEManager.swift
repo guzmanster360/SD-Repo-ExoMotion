@@ -17,7 +17,12 @@ struct DataIn: Codable {
     let gyroX: Double
     let gyroY: Double
     let gyroZ: Double
-    let fsrPres: Double
+    let fsrPres_1: Double
+    let fsrPres_2: Double
+    let fsrPres_3: Double
+    let fsrPres_4: Double
+    let fsrPres_5: Double
+    let fsrPres_6: Double
 }
 
 class BLEManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
@@ -97,8 +102,13 @@ class BLEManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
                     print("Gyroscope X: \(sensorData.gyroX)")
                     print("Gyroscope Y: \(sensorData.gyroY)")
                     print("Gyroscope Z: \(sensorData.gyroZ)")
-                    print("FSR Pressure: \(sensorData.fsrPres)")
-                    
+                    print("FSR 1: \(sensorData.fsrPres_1)")
+                    print("FSR 1: \(sensorData.fsrPres_2)")
+                    print("FSR 1: \(sensorData.fsrPres_3)")
+                    print("FSR 1: \(sensorData.fsrPres_4)")
+                    print("FSR 1: \(sensorData.fsrPres_5)")
+                    print("FSR 1: \(sensorData.fsrPres_6)")
+
                     let fetchedResults = storageManager.retrieveUserData()
                         for userStored in fetchedResults {
                             if fetchedResults.count > 0 {
@@ -107,7 +117,7 @@ class BLEManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
                                 sessionID = userStored.value(forKey: "sessionID") as? String
                                 
                                 // combine all data into one JSON
-                                let jsonPackage = DataOut(timestamp: (awsManager.getTimestamp()), userID: userID!, sessionID: sessionID!, sessionDescription: sessionDescription!, seaTorque: sensorData.seaTorque, emgRaw: sensorData.emgRaw, accelX: sensorData.accelX, accelY: sensorData.accelY, accelZ: sensorData.accelZ, gyroX: sensorData.gyroX, gyroY: sensorData.gyroY, gyroZ: sensorData.gyroZ, fsrPres: sensorData.fsrPres)
+                                let jsonPackage = DataOut(timestamp: (awsManager.getTimestamp()), userID: userID!, sessionID: sessionID!, sessionDescription: sessionDescription!, seaTorque: sensorData.seaTorque, emgRaw: sensorData.emgRaw, accelX: sensorData.accelX, accelY: sensorData.accelY, accelZ: sensorData.accelZ, gyroX: sensorData.gyroX, gyroY: sensorData.gyroY, gyroZ: sensorData.gyroZ, fsrPres_1: sensorData.fsrPres_1, fsrPres_2: sensorData.fsrPres_2, fsrPres_3: sensorData.fsrPres_3, fsrPres_4: sensorData.fsrPres_4, fsrPres_5: sensorData.fsrPres_5, fsrPres_6: sensorData.fsrPres_6)
                             
                                 if let jsonData = try? JSONEncoder().encode(jsonPackage) {
                                     let jsonString = String(data: jsonData, encoding: .utf8)

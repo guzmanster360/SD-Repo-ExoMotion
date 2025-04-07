@@ -78,12 +78,17 @@ class AWSManager():
     def get_s3_data(self, prefix):
         """Fetch latest S3 data and return as DataFrame."""
         files = self.list_s3_files(prefix)
+        # print(files)
         if not files:
             return pd.DataFrame()
-        latest_file = sorted(files)[-1]  # Get the most recent file
-        data = self.download_s3_file(latest_file)
-        # Assuming df is your DataFrame    
-        return pd.DataFrame(data)
+                
+        all_data = []
+        for file_key in sorted(files):
+            data = self.download_s3_file(file_key)
+            if data:
+                all_data.extend(data)  # Combine all JSON entries into one list
+        print(len(all_data))
+        return pd.DataFrame(all_data) if all_data else pd.DataFrame()
     
     # Dropdown for sensor selection
     def list_s3_user_files(self, prefix):
