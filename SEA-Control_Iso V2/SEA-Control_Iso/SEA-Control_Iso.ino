@@ -1,4 +1,6 @@
 // Libraries
+#include <ODriveUART.h>
+#include <SoftwareSerial.h>
 #include <AS5600.h>
 #include <Wire.h>
 
@@ -6,6 +8,9 @@
 #define EN1 9
 #define IN1 8
 #define IN2 7
+
+SoftwareSerial odrive_serial(10, 11);
+unsigned long baudrate = 19200;  // Must match what you configure on the ODrive (see docs for details)
 
 float ROM = 250;  // max ROM fro SEA
 
@@ -34,9 +39,11 @@ const float b_d = 0.5;                                                          
 
 // Sensor Objects
 AS5600 encoder;
+ODriveUART odrive(odrive_serial);
 float theta_m, theta_l, torque_estimate, torque_command, impedance_torque, total_torque;
 
 void setup() {
+  odrive_serial.begin(baudrate);
   Serial.begin(115200);
 
   Wire.begin();  // Initialize I²C
@@ -46,18 +53,43 @@ void setup() {
   } else {
     Serial.println("AS5600 NOT detected. Check wiring.");
   }
+
+  delay(10);
+
+  Serial.println("Waiting for ODrive...");
+  while (odrive.getState() == AXIS_STATE_UNDEFINED) {
+    delay(100);
+  }
+
+  Serial.println("found ODrive");
+
+  Serial.print("DC voltage: ");
+  Serial.println(odrive.getParameterAsFloat("vbus_voltage"));
+
+  Serial.println("Enabling closed loop control...");
+  odrive.setState(AXIS_STATE_CLOSED_LOOP_CONTROL);
+
+  // while (odrive.getState() != AXIS_STATE_CLOSED_LOOP_CONTROL) {
+  //   odrive.clearErrors();
+  //   odrive.setState(AXIS_STATE_CLOSED_LOOP_CONTROL);
+  //   delay(10);
+  // }
+
+  Serial.println("ODrive running!");
+
   zero_motor();
 }
 
 void loop() {
-  Serial.println(get_EF_angle_deg());
-  // transparency();
+  // Serial.println(get_EF_angle_rad());
+  transparency();
+  delay(5);
 }
 
 void compliance() {
   // Read Motor Position from AS5600
-  theta_l = get_EF_angle_rad() - PI;       // Convert to radians
-  theta_m = get_encoder_angle_rad() - PI;  //radians
+  theta_l = get_EF_angle_rad() - PI;   // Convert to radians
+  theta_m = get_MOT_angle_rad() - PI;  //radians
 
   // Compute Torque from Spring Deflection
   torque_estimate = k_s * (theta_m - theta_l);
@@ -85,50 +117,34 @@ void compliance() {
 }
 
 void pos_control(int angle) {
-  int pos_mot_angle = get_encoder_angle_deg() - 180;
-  while (pos_mot_angle != angle) {  // maybe GIVE ANGLE TOLERANCE OF +/- 1
-    if (pos_mot_angle < angle) {
-      analogWrite(EN1, 225);
-      digitalWrite(IN1, LOW);  // RIGHT
-      digitalWrite(IN2, HIGH);
-    } else {
-      analogWrite(EN1, 225);
-      digitalWrite(IN1, HIGH);  // LEFT
-      digitalWrite(IN2, LOW);
-    }
-    pos_mot_angle = get_encoder_angle_deg() - 180;
-    Serial.print("MOT: ");
-    Serial.print(pos_mot_angle);
-    Serial.print("  POT: ");
-    Serial.println(angle);
-  }
 }
 
 void drive_Motor(float torque) {
-  int pwm_value = map(abs(torque) * 1000, 0, 5000, 50, 255);  // Scale torque to PWM range
-  if (torque > 0) {
-    analogWrite(EN1, pwm_value);
-    digitalWrite(IN1, LOW);
-    digitalWrite(IN2, HIGH);
-  } else {
-    analogWrite(EN1, pwm_value);
-    digitalWrite(IN1, HIGH);
-    digitalWrite(IN2, LOW);
-  }
+  odrive.setPosition(
+    0,    // position
+    0.01  // velocity feedforward (optional)
+  );
 }
 
-// void transparency() {
-//   int pot_angle = get_pot_angle_deg() - 180;
-//   pos_control(pot_angle / drive_ratio);
-// }
+void transparency() {
+  float EF_angle = get_EF_angle_rad();
+  // Serial.println((EF_angle * drive_ratio) / (2 * PI));
+  odrive.setPositionLimit(
+    (EF_angle * drive_ratio) / (2 * PI),
+    5,
+    1 * EF_angle  // position
+  );
+}
 
 // Method for getting the value of the potentiometer and converting it to an angular position
 float get_EF_angle_rad() {
-  float raw_angle = encoder.rawAngle();  // 0 - 4095 (12-bit)
+  float raw_angle = encoder.getCumulativePosition();  // 0 - 4095 (12-bit)
+  // return raw_angle;
+  Serial.println(raw_angle);
   return raw_angle * (2 * PI / 4095.0);  // Convert to radians
 }
 
-float get_encoder_angle_rad() {
+float get_MOT_angle_rad() {
   float raw_angle = encoder.rawAngle();  // 0 - 4095 (12-bit)
   return raw_angle * (2 * PI / 4095.0);  // Convert to radians
 }
@@ -138,9 +154,9 @@ float get_EF_angle_deg() {
   return raw_angle * (360 / 4095.0);     // Convert to degrees
 }
 
-float get_encoder_angle_deg() {
-  float raw_angle = encoder.rawAngle();  // 0 - 4095 (12-bit)
-  return raw_angle * (360 / 4095.0);     // Convert to degrees
+float get_MOT_angle_deg() {
+  ODriveFeedback feedback = odrive.getFeedback();
+  return feedback.pos;
 }
 
 void stop_Motor() {
@@ -150,40 +166,13 @@ void stop_Motor() {
 }
 
 void zero_motor() {
-  // slow speed
-  float cal_speed = 200;
-  float mot_angle = int(get_encoder_angle_deg());
-  float ef_angle = int(get_EF_angle_deg());
-
-  while (mot_angle != 180) {
-    Serial.println(mot_angle);
-    if (mot_angle <= 360 && mot_angle > 180) {
-      analogWrite(EN1, cal_speed);
-      digitalWrite(IN1, HIGH);  // RIGHT
-      digitalWrite(IN2, LOW);
-    } else {
-      analogWrite(EN1, cal_speed);
-      digitalWrite(IN1, LOW);  // LEFT
-      digitalWrite(IN2, HIGH);
-    }
-    mot_angle = int(get_encoder_angle_deg());
-  }
-  stop_Motor();
-  delay(50);
-  while (ef_angle != 180) {
-    ef_angle = int(get_EF_angle_deg());
-    Serial.print("ZERO ENCODER: ");
-    Serial.println(ef_angle);
-  }
-
-  Serial.print(mot_angle);
-  Serial.print("  ");
-  Serial.print(ef_angle);
-  delay(5000);
+  odrive.setPosition(
+    0.5,
+    0.05);
 }
 
 void check_rom() {
-  if (get_encoder_angle_rad() > (180 + (ROM / 2)) || get_encoder_angle_rad() < (180 - (ROM / 2))) {
+  if (get_MOT_angle_rad() > (180 + (ROM / 2)) || get_MOT_angle_rad() < (180 - (ROM / 2))) {
     stop_Motor();
   }
 }

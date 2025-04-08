@@ -1,4 +1,3 @@
-
 #include <ODriveUART.h>
 #include <SoftwareSerial.h>
 
@@ -15,10 +14,10 @@
 // You can of course use something different if you like
 // Don't forget to also connect ODrive ISOVDD and ISOGND to Arduino 3.3V/5V and GND.
 
-// Arduino without spare serial ports (such as Arduino UNO) have to use software serial.
+// Arduino Nano without spare serial ports (such as Arduino UNO) have to use software serial.
 // Note that this is implemented poorly and can lead to wrong data sent or read.
-// pin 8: RX - connect to ODrive TX
-// pin 9: TX - connect to ODrive RX
+// pin 10: RX - connect to ODrive TX
+// pin 11: TX - connect to ODrive RX
 SoftwareSerial odrive_serial(8, 9);
 unsigned long baudrate = 19200;  // Must match what you configure on the ODrive (see docs for details)
 

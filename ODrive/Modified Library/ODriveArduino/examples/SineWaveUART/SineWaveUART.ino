@@ -1,4 +1,3 @@
- 
 #include <ODriveUART.h>
 #include <SoftwareSerial.h>
 
@@ -19,7 +18,7 @@
 // Note that this is implemented poorly and can lead to wrong data sent or read.
 // pin 8: RX - connect to ODrive TX
 // pin 9: TX - connect to ODrive RX
-SoftwareSerial odrive_serial(8, 9);
+SoftwareSerial odrive_serial(10, 11);
 unsigned long baudrate = 19200; // Must match what you configure on the ODrive (see docs for details)
 
 // Teensy 3 and 4 (all versions) - Serial1
@@ -57,11 +56,13 @@ void setup() {
   Serial.println(odrive.getParameterAsFloat("vbus_voltage"));
   
   Serial.println("Enabling closed loop control...");
-  while (odrive.getState() != AXIS_STATE_CLOSED_LOOP_CONTROL) {
-    odrive.clearErrors();
-    odrive.setState(AXIS_STATE_CLOSED_LOOP_CONTROL);
-    delay(10);
-  }
+  odrive.clearErrors();
+  odrive.setState(AXIS_STATE_CLOSED_LOOP_CONTROL);
+  // while (odrive.getState() != AXIS_STATE_CLOSED_LOOP_CONTROL) {
+  //   odrive.clearErrors();
+  //   odrive.setState(AXIS_STATE_CLOSED_LOOP_CONTROL);
+  //   delay(10);
+  // }
   
   Serial.println("ODrive running!");
 }
@@ -75,7 +76,8 @@ void loop() {
   
   odrive.setPosition(
     sin(phase), // position
-    cos(phase) * (TWO_PI / SINE_PERIOD) // velocity feedforward (optional)
+    2, // velocity feedforward (optional),
+    0.4
   );
 
   ODriveFeedback feedback = odrive.getFeedback();
@@ -86,3 +88,4 @@ void loop() {
   Serial.print(feedback.vel);
   Serial.println();
 }
+
